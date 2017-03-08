@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head >
+    <title>tech01</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <script type="text/javascript" src="dynaform.js" > </script>
+</head>
+<body>
+    <div id="content">
+
+    </div>
+    <script type="text/javascript" >
+        var types = {
+            "ServiceName": {type: "string", maxLength: 20, minLength: 3, validation: /[^\s]+/},
+            "ServiceVersion": {type: "string", maxLength: 10, minLength: 3, validation: /[\d]+(\.[\d\s\-])+/},
+            "ServiceProtocol": {type: "string", source: "['soap1.1', 'soap1.2', 'rest']", maxLength: 10, minLength: 3, validation: "source" },
+            "ApplicationList": {type: "Application", source: function(){return []} , validation: "source" },
+            "Description": {type: "string", maxLength: 200, minLength: 0},
+            "URL": {type: "string", maxLength: 1024, minLength: 8, validation: /^http:\/\/[\w\d]+(\.[\w+\d\-]+)?/}
+        };
+        var entities = {
+            "ServiceURL": {
+                url: {type: "URL", label: "地址"},
+                weight: {type: "int", label: "权重"},
+            }
+        };
+        var form = {
+            name: "form1", 
+            fields: {
+                name: {label: "服务名称", type: "ServiceName", required: true},
+                version: {label: "服务版本", type: "ServiceVersion", "default": "1.0", required: true},
+                protocol: {label: "服务协议", type: "ServiceProtocol", required: true},
+                application: {label: "所属应用", type: "ApplicationList", required: true},
+                description: {label: "服务说明", type: "Description", required: false},
+                urlCount: {label: "服务数量", value: function(){return this.urls.length;}, type: "int", readonly: true },
+                urls: {label: "服务URL", type: "ServiceURL[]", minLength: 0, maxLength: 10}
+            }
+
+        };
+        var style = {
+            "*": {
+                "class": "md-6",
+                "control": "input",
+                "control-prefix": "<" + "div class='md-12' >",
+                "control-postfix": "<" + "/div>",
+                "control-template": "{0}{1}"
+            },
+            name : {"control-layout": "label"},
+            description: {control: "textArea"},
+            urls: {control: "table", "class": "aaa"},
+            "urls[]": { "class": "abc" },
+            "urls[].url" : {},
+            "urls[].weight" : {},
+        };
+
+        var theForm = new dynaform.Form(form, style, types, entities);
+        var theField = new dynaform.Field(theForm, theForm, "name", form.fields.name);
+
+        var output = new dynaform.outputs.InnerHtmlOutput("content");
+        theField.generate(output);
+        output.flush();
+        theForm.generate(output);
+        output.close();
+
+    </script>
+
+</body>
+</html>

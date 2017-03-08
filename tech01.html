@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head >
+    <title>tech01</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <script type="text/javascript" src="dynaform.js" > </script>
+    <script type="text/javascript" >
+        function _isArray(obj){return toString.apply(v) === '[object Array]';}
+
+        function _hasProperty(obj, propName){ return obj != null && typeof(obj[propName]) != "undefined"; }
+
+        function _getProperty(obj, propName){ return obj != null ? obj[propName] : null; }
+
+        function _startWith(str, substr){
+            if( str != null && substr != null && str.length >= substr.length ){
+                return str.indexOf(substr) == 0;
+            }
+            return false;
+        }
+
+        function _endsWith(str, substr){
+            if( str != null && substr != null && str.length >= substr.length ){
+                var pos = str.indexOf(substr);
+                return pos >= 0 && pos + substr.length == str.length;
+            }
+            return false;
+        }
+
+        function _substrBefore(str, substr){
+            if( str != null && str.length > 0 && substr != null && substr.length > 0 ){
+                var pos = str.indexOf(substr);
+                return pos == -1 ? "" : str.substr(0, pos);
+            }
+
+            return str;
+        }
+
+        function _substrAfter(str, substr){
+            if( str != null && str.length > 0 && substr != null && substr.length > 0 ){
+                var pos = str.indexOf(substr);
+                return pos == -1 ? "" : str.substr(pos + substr.length);
+            }
+
+            return str;
+        }
+
+        // callback(item, index)
+        function _eachArray(arr, callback){
+            if( _isArray(arr) ){
+                var len = arr.length;
+                for(var i = 0; i < len; ++i)
+                    callback(arr[i], i);
+            }
+        }
+
+        // callback(propName, propValue)
+        function _eachMember(obj, callback){
+            for(var prop in obj){
+                if( obj.hasOwnProperty(prop) )
+                    callback(prop, obj[prop]);
+            }
+        }
+
+        // callback(propName, propValue)
+        function _eachProperty(obj, callback){
+            for(var prop in obj){
+                if( obj.hasOwnProperty(prop) && typeof(obj[prop]) != "function" )
+                    callback(prop, obj[prop]);
+            }
+        }
+
+        // src: obj or []
+        function _copy(dest, src, overwrite){
+            if( dest != null || src != null ){
+                var func = function(prop, value){
+                    if( overwrite == null || overwrite == true || !dest.hasOwnProperty(prop) )
+                        dest[prop] = value;
+                };
+
+                if( _isArray(src) ){
+                    _eachArray(src, function(item, index){ _eachProperty(item, func); });
+                }else {
+                    _eachProperty(src, func);
+                }
+            }
+
+            return dest;
+        }
+
+    </script>
+    <script type="text/javascript" >
+    var controls = {
+        "input": function(output, field){
+
+        },
+    };
+    </script>
+    <script type="text/javascript" >
+
+        function
+
+
+        function foreachForm(form, callback){
+            if( _isArray(form) ){
+                _eachArray(form, function(item, index){
+                    if( item != null )
+                        callback(item.name, item);
+                });
+            }else {
+                _eachProperty(form, callback);
+            }
+        }
+
+        function generate(output, form, style, types, entities){
+            if( output == null ) return;
+
+            var styleGetter = function(styleName){ return style[styleName]; };
+            generateField(output, form, "*", styleGetter, types, entities);
+        }
+
+        function generateField(output, form, generalStyleName, fnStyleGetter, types, entities){
+            var generalStyle = _copy({}, fnStyleGetter(generalStyleName) );
+            // 遍历每一个form的元素
+            foreachForm(form, function(name, formInfo){
+                // 将formInfo，style都复制到一个独立的对象中，避免修改污染定义，影响全局
+                var field = _copy({}, [formInfo, generalStyle, fnStyleGetter(name)]);
+                var typeName = field.type;
+                if( _endsWith(typeName, "[]") ){
+                    // 如果是数组类型
+                    var subtypeName = _substrBefore(typeName, "[]");
+                    var subtype = types[subtypeName] || entities[subtypeName];
+                    var substyleGetter = function(styleName){return fnStyleGetter(name + "[]." + styleName)};
+                    // 生成子元素的结构，使用同一个style获取机制
+                    generateField(output, subtype, name+"[]", substyleGetter, types, entities);
+                }else{
+                    var control = checkControl(field);
+                    control(output, field);
+                }
+            });
+        }
+
+        function checkControl(field){
+            var ctl = null;
+            if( field ){
+                if( field.control )
+                    ctl = controls[field.control];
+                if( ctl == null && field.source ){
+                    ctl = field.validation == "source" ? controls["select"] : controls["input"];
+                }
+            }
+            return ctl;
+        }
+
+    </script>
+</head>
+<body>
+    <div id="content">
+
+    </div>
+    <script type="text/javascript" >
+        var types = {
+            "ServiceName": {type: "string", maxLength: 20, minLength: 3, validation: /[^\s]+/},
+            "ServiceVersion": {type: "string", maxLength: 10, minLength: 3, validation: /[\d]+(\.[\d\s\-])+/},
+            "ServiceProtocol": {type: "string", source: "['soap1.1', 'soap1.2', 'rest']", maxLength: 10, minLength: 3, validation: "source" },
+            "ApplicationList": {type: "Application", source: function(){return []} , validation: "source" },
+            "Description": {type: "string", maxLength: 200, minLength: 0},
+            "URL": {type: "string", maxLength: 1024, minLength: 8, validation: /^http://[\w\d]+(\.[\w+\d\-]+)?(\/[\w\d]*)*(\?[\w\d\&])*/}
+        };
+        var entities = {
+            "ServiceURL": {
+                url: {type: "URL", label: "地址"},
+                weight: {type: "int", label: "权重"},
+            }
+        };
+        var form = {
+            name: {label: "服务名称", type: "ServiceName", required: true},
+            version: {label: "服务版本", type: "ServiceVersion", "default": "1.0", required: true},
+            protocol: {label: "服务协议", type: "ServiceProtocol", required: true},
+            application: {label: "所属应用", type: "ApplicationList", required: true},
+            description: {label: "服务说明", type: "Description", required: false},
+            urlCount: {label: "服务数量", value: function(){return this.urls.length;}, type: "int", readonly: true },
+            urls: {label: "服务URL", type: "ServiceURL[]", minLength: 0, maxLength: 10}
+        };
+        var style = {
+            "*": {
+                "class": "md-6",
+                "control": "input",
+                "control-prefix": "<" + "div class='md-12' >",
+                "control-postfix": "<" + "/div>",
+                "control-template": "{0}{1}"
+            },
+            description: {control: "textArea"},
+            urls: {control: "table", "class": "aaa"},
+            "urls[]": { "class": "abc" },
+            "urls[].url" : {},
+            "urls[].weight" : {},
+        };
+
+        document.getElementById("content").innerHTML = new dynaform.Form(form, style, types, entities).generate(dynaform.outputs.HtmlOutput());
+
+    </script>
+
+    <table border="1" cellspacing="0" cellpadding="0">
+        <thead>
+            <tr><th>属性名</th>     <th>类型</th>        <th>表单</th> <th>类型</th> <th>样式</th> <th>用途说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>type</td>       <td>字符串</td>    <td></td> <td>定义</td> <td></td> <td>定义控件类型</td></tr>
+            <tr><td>maxLength</td> <td>正整数</td>     <td></td> <td>定义</td> <td></td> <td>内容的最大长度</td></tr>
+            <tr><td>minLength</td> <td>正整数</td>     <td></td> <td>定义</td> <td></td> <td>内容的最小长度</td></tr>
+            <tr><td>validation</td> <td>正则表达式</td> <td></td> <td>定义</td> <td></td> <td>检验数据是否合法，source表示限定source来源内选择</td></tr>
+            <tr><td>source</td>     <td>函数／代码</td> <td></td> <td>定义</td> <td></td> <td>数据来源</td></tr>
+            <tr><td>label</td>      <td>字符串</td>    <td>覆盖</td> <td>定义</td> <td></td> <td>标签</td></tr>
+            <tr><td>default</td>    <td>函数／代码</td> <td>覆盖</td> <td>定义</td> <td></td> <td>默认值</td></tr>
+            <tr><td>required</td>   <td>布尔</td>     <td>定义</td> <td></td> <td>覆盖</td> <td>是否必须</td></tr>
+            <tr><td>value</td>      <td>函数／代码</td> <td>定义</td> <td></td> <td></td> <td>计算出数值，一般用于公式字段</td></tr>
+            <tr><td>readonly</td>   <td>布尔</td>     <td>定义</td> <td></td> <td>覆盖</td> <td>是否只读</td></tr>
+            <tr><td>control</td>    <td>字符串</td>    <td>覆盖1</td> <td>定义</td> <td>覆盖2</td> <td>控件类型</td></tr>
+            <tr><td>class</td>      <td>字符串</td>    <td>定义</td> <td></td> <td>覆盖</td> <td>附加的样式名称</td></tr>
+            <tr><td></td>           <td></td>           <td></td> <td></td> <td></td> <td></td></tr>
+            <tr><td></td>           <td></td>           <td></td> <td></td> <td></td> <td></td></tr>
+            <tr><td></td>           <td></td>           <td></td> <td></td> <td></td> <td></td></tr>
+            <tr><td></td>           <td></td>           <td></td> <td></td> <td></td> <td></td></tr>
+        </tbody>
+    </table>
+
+
+</body>
+</html>
