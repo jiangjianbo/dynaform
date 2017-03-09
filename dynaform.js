@@ -220,7 +220,7 @@ dynaform.Control = dynaform.defineClass({
 */
 
 // 存储各种对象的默认值
-var defaults = {
+dynaform.defaults = {
 	"type" : {
 		"type": undefined,
 		"source": undefined,
